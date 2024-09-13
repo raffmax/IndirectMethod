@@ -7,7 +7,10 @@ n   = 4; % state dimension
 
 % passive solution at vAVG=0.1
 load passiveGait_01.mat
-vAVG = passiveGait_01.vAVG;
+vAVG      = passiveGait_01.vAVG;
+T_pas     = passiveGait_01.T;
+x0_pas    = passiveGait_01.x0;
+gamma_pas = passiveGait_01.gamma;
 
 gamma_end = 0;
 
@@ -16,18 +19,22 @@ rootFunctionTolerance = 1e-8;
 odeOpts = odeset('RelTol',1e-9,'AbsTol',1e-10); % ode solver
 h = 1e-2; % fixed step-size in continuation
 
-% reconstruct q from passive solution
-[~,X] = ode15s(@(t,x) fAUTO(x,0),[0,passiveGait_01.T],passiveGait_01.x0,odeOpts);
-[~,~,~,q] = cFUN(passiveGait_01.T,X(end,:)',0,passiveGait_01.gamma,vAVG);
+% reconstruct multipliers from passive solution
+p0_pas     = zeros(4,1);
+q_pas      = 1/(vAVG*T_pas);
+lambda_pas = zeros(2,1);
+
+u0_pas = 0;
+
 % X = [T,x0,p0,q,u0,lambda,gamma,vAVG]
 % X = [z;vAVG]
-X0 = [passiveGait_01.T;
-      passiveGait_01.x0;
-      zeros(n,1);
-      q;
-      0;
-      zeros(2,1);
-      passiveGait_01.gamma;
+X0 = [T_pas;
+      x0_pas;
+      p0_pas;
+      q_pas;
+      u0_pas;
+      lambda_pas;
+      gamma_pas;
       vAVG];
 
 rFun = @(z) resIndirect([z;vAVG],n,odeOpts); % fix vAVG
