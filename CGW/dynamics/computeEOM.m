@@ -12,8 +12,8 @@ syms x y sw st real   % Generalized coordinates
 syms dx dy dsw dst real % Generalized velocities
 syms u real  % Input variable (control)
 
-q  = [x y sw st];  % Generalized coordinates vector
-dq = [dx dy dsw dst];  % Generalized velocities vector
+q  = [x; y; sw; st];      % Generalized coordinates vector
+dq = [dx; dy; dsw; dst];  % Generalized velocities vector
 
 gamma = sym('gamma', 'real');  % Slope of the ground (incline)
 
@@ -40,9 +40,9 @@ CoG_sw  = pos_Hip + b * [sin(sw); -cos(sw)];  % CoG of the swinging leg
 CoG_st  = pos_Hip + b * [sin(st); -cos(st)];  % CoG of the stance leg
 
 % Velocities of the centers of gravity
-d_CoG_T  = jacobian(CoG_T, q) * dq.';  % Velocity of the torso
-d_CoG_sw = jacobian(CoG_sw, q) * dq.';  % Velocity of the swinging leg
-d_CoG_st = jacobian(CoG_st, q) * dq.';  % Velocity of the stance leg
+d_CoG_T  = jacobian(CoG_T, q) * dq;  % Velocity of the torso
+d_CoG_sw = jacobian(CoG_sw, q) * dq;  % Velocity of the swinging leg
+d_CoG_st = jacobian(CoG_st, q) * dq;  % Velocity of the stance leg
 
 %% --- Energies ---
 % Define potential and kinetic energy expressions
@@ -59,7 +59,7 @@ T = 0.5 * ( m_h * sum(d_CoG_T.^2) + ...
 % M * ddq + C * dq + G = 0
 % Derive mass matrix (M), Coriolis matrix (C), and gravity vector (G) using
 % Euler-Lagrange formalism.
-[M, C, CMat, G] = eulerLagrange(T, V, q, dq); 
+[M, C, CMat, G] = eulerLagrange(T, V, q', dq'); 
 
 %% --- Contact Projection Matrices ---
 % Compute the contact matrices for the stance and swing legs, and their derivatives
@@ -69,8 +69,8 @@ g_st = [x + l * sin(st); y - l * cos(st)];  % Stance leg
 g_sw = [x + l * sin(sw); y - l * cos(sw)];  % Swing leg
 
 % Compute contact matrices (W) and their time derivatives (W_dot)
-[W_st, W_st_dot] = computeContactMatrix(g_st, q, dq);  % Stance leg contact matrix
-[W_sw, W_sw_dot] = computeContactMatrix(g_sw, q, dq);  % Swing leg contact matrix
+[W_st, W_st_dot] = computeContactMatrix(g_st, q', dq');  % Stance leg contact matrix
+[W_sw, W_sw_dot] = computeContactMatrix(g_sw, q', dq');  % Swing leg contact matrix
 
 % Compute discrete map for collision dynamics
 Gd    = W_sw' * (M \ W_sw); 
@@ -89,7 +89,7 @@ q_z = [-l * sin(stM + gamma); l * cos(stM + gamma); swM + gamma; stM + gamma];
 BTrafo = jacobian(q_z, z);  % Transformation matrix
 
 % Transform velocities into minimal coordinates
-dqNew = BTrafo * dz;
+dq_z = BTrafo * dz;
 
 % Compute time derivative of transformation matrix
 BdtTrafo = BTrafo;
@@ -100,18 +100,18 @@ for i = 1:size(BdtTrafo,1)
 end
 
 % Minimal coordinate mass matrix and Coriolis term
-M_min = simplify(BTrafo' * subs(M, q', q_z) * BTrafo);
-c_min = simplify(BTrafo' * subs(C, [q'; dq'], [q_z; dqNew]) + BTrafo' * subs(M, q', q_z) * BdtTrafo * dz);
+M_min = simplify(BTrafo' * subs(M, q, q_z) * BTrafo);
+c_min = simplify(BTrafo' * subs(C, [q; dq], [q_z; dq_z]) + BTrafo' * subs(M, q, q_z) * BdtTrafo * dz);
 
 % Potential energy and control input in minimal coordinates
-G_min = simplify(BTrafo' * subs(G, q', q_z));
+G_min = simplify(BTrafo' * subs(G, q, q_z));
 B_min = simplify(BTrafo' * [0 0 -1 1]');
 
 % Minimal coordinate system dynamics
 f_min = [dz; simplify(M_min \ (B_min * u - G_min - c_min))];
 
 % Minimal coordinate discrete map
-Delta_min = simplify(expand([zeros(2), eye(2)] * subs(Delta, q', q_z) * BTrafo));
+Delta_min = simplify(expand([zeros(2), eye(2)] * subs(Delta, q, q_z) * BTrafo));
 g_min = [stM; swM; Delta_min * dz];
 
 %% Automatic Function Generation
