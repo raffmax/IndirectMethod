@@ -1,5 +1,5 @@
 %% set up
-addpath('utilities');
+addpath(fullfile('..', 'utilities'));
 addpath('dynamics');
 addpath('animations');
 
