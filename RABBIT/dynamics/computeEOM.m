@@ -44,6 +44,7 @@ g_vec = [sin(gamma); -cos(gamma)] * g;
 CoG_T       = [x; y];  % CoG of the torso 
 Angle_T     = q5;
 pos_Hip     = CoG_T+p_T*[sin(Angle_T);-cos(Angle_T)];  % Position of the hip
+pos_Head    = pos_Hip-l_T*[sin(Angle_T);-cos(Angle_T)];  % Position of the head
 Angle_f_sw  = q2+q5;
 Angle_f_st  = q1+q5;
 CoG_f_sw    = pos_Hip + p_f * [-sin(Angle_f_sw); cos(Angle_f_sw)];  % CoG of the swinging femur
@@ -167,7 +168,7 @@ B_min = simplify(BTrafo' * [eye(4);zeros(3,4)]);
 
 % Substitute numerical values for parameters (normalized)
 m0_val  = 12+2*(6.8+3.2); % total Mass
-l0_val = 0.8; % leg length
+l0_val  = 0.8; % leg length
 g0_val  = 9.81; % gravity
 I0_val  = m0_val*l0_val^2; % inertia
 
@@ -189,6 +190,12 @@ p_t_val = 0.24/l0_val;
 
 g_val = 1; % 9.81/g0_val
 
+posSwingFoot = subs(subs(pos_Foot_sw, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+posSwingKnee = subs(subs(pos_Knee_sw, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+posStanceKnee = subs(subs(pos_Knee_st, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+posHip = subs(subs(pos_Hip, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+posHead = subs(subs(pos_Head, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+
 M = subs(M, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
 W_sw = subs(W_sw, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
 BTrafo = subs(BTrafo, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
@@ -198,6 +205,8 @@ c_min = subs(c_min, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_
 G_min = subs(G_min, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
 
 x = [z; dz];  % State vector
+dposSwingFootdx = jacobian(posSwingFoot, x);
+
 dMdx = sym(zeros(7,7,10)); % Jacobian of M with respect to x
 for i = 1:10
     dMdx(:,:,i) = diff(M, x(i));
@@ -231,6 +240,14 @@ if ~exist(targetFolder, 'dir')
 end
 
 % Generate the function in the desired folder
+matlabFunction(posSwingFoot, 'File', fullfile(targetFolder, 'posSwingFootAUTO'), 'Vars', {x});
+matlabFunction(posSwingKnee, 'File', fullfile(targetFolder, 'posSwingKneeAUTO'), 'Vars', {x});
+matlabFunction(posStanceKnee, 'File', fullfile(targetFolder, 'posStanceKneeAUTO'), 'Vars', {x});
+matlabFunction(posHip, 'File', fullfile(targetFolder, 'posHipAUTO'), 'Vars', {x});
+matlabFunction(posHead, 'File', fullfile(targetFolder, 'posHeadAUTO'), 'Vars', {x});
+
+matlabFunction(dposSwingFootdx, 'File', fullfile(targetFolder, 'dposSwingFootdxAUTO'), 'Vars', {x});
+
 matlabFunction(M, 'File', fullfile(targetFolder, 'MAUTO'), 'Vars', {x});
 matlabFunction(W_sw, 'File', fullfile(targetFolder, 'W_swAUTO'), 'Vars', {x});
 matlabFunction(BTrafo, 'File', fullfile(targetFolder, 'BTrafoAUTO'), 'Vars', {x});

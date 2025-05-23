@@ -4,7 +4,7 @@ function [t,x,u,cost,p] = getTrajectoriesIndirect(T,x0,p0,q,u0,gamma,vAVG,odeOpt
 
 n = numel(x0);
 
-[~,~,~,~,t,z] = flowIndirect(T,x0,p0,q,u0,odeOpts);
+[~,~,~,~,t,z] = flowIndirect(T,x0,p0,q,u0,gamma,odeOpts);
 x = z(:,1:n);
 yT = z(end,n+1)';
 p = z(:,n+1+(1:n));
