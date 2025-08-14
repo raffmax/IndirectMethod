@@ -1,14 +1,13 @@
-function [res,f] = resDirect(X,n,nXi,odeOpts)
+function [res,f] = resDirect(X,n,m,nXi,odeOpts)
 % direct shooting implementation of r
 
 % X  = [T,x0,xi,lambda,gamma,vAVG]
-idx_T = 1;
-idx_x0 = 1+(1:n);
-idx_xi = 1+n+(1:nXi);
-idx_lambda = 1+n+nXi+(1:n+2);
-idx_gamma = 1+n+nXi+n+2+1;
-idx_vAVG = 1+n+nXi+n+2+2;
-
+idx_T      = 1;
+idx_x0     = 1+(1:n);
+idx_xi     = 1+n+(1:m*nXi);
+idx_lambda = 1+n+m*nXi+(1:n+2);
+idx_gamma  = 1+n+m*nXi+n+2+1;
+idx_vAVG   = 1+n+m*nXi+n+2+2;
 
 T      = X(idx_T);
 x0     = X(idx_x0);
@@ -17,7 +16,7 @@ lambda = X(idx_lambda);
 gamma  = X(idx_gamma); % slope
 vAVG   = X(idx_vAVG); % avg speed
 
-[zT,zT_T,zT_x0,zT_xi] = flowDirect(T,x0,xi,gamma,odeOpts);
+[zT,zT_T,zT_x0,zT_xi] = flowDirect(T,x0,xi,gamma,m,odeOpts);
 xT = zT(1:n);
 yT = zT(n+1);
 xT_T  = zT_T(1:n,:);

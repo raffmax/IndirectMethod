@@ -1,4 +1,4 @@
-function contData = directContinuation(z_init,rFun,sigma_end,n,nXi,fDstepSize,rootFunctionTolerance,h)
+function contData = directContinuation(z_init,rFun,sigma_end,n,m,nXi,fDstepSize,rootFunctionTolerance,h)
 %directContinuation Implementation of Algorithm 1 with the direct method
 opts = [];
 opts.Grad1 = false;
@@ -10,8 +10,8 @@ opts.FunctionTolerance = rootFunctionTolerance;
 opts.StepTolerance = 1e-11;
 [z,fval,~,output,jac] = NewtonsMethod(rFun,z_init,opts);
 
-D = getTangent(jac((n+nXi+2):end,1:(n+nXi+1)));
-contData.strictMin = min(eig(D'*jac(1:(n+nXi+1),1:(n+nXi+1))*D));
+D = getTangent(jac((n+m*nXi+2):end,1:(n+m*nXi+1)));
+contData.strictMin = min(eig(D'*jac(1:(n+m*nXi+1),1:(n+m*nXi+1))*D));
 
 output.t  = getTangent(jac);
 simJacobian = jac(:,1:opts.idxConPar-1);
@@ -24,8 +24,8 @@ contData.simJacobian(:,:,1) = simJacobian;
 contData.augJacobian(:,:,1) = augJacobian;
 contData.T = z(1);
 contData.x0 = z(1+(1:n));
-contData.xi = z(1+n+(1:nXi));
-contData.lambda = z(1+n+nXi+(1:(n+2)));
+contData.xi = z(1+n+(1:m*nXi));
+contData.lambda = z(1+n+m*nXi+(1:(n+2)));
 contData.sigma = z(end);
 [~,cost] = rFun(z);
 contData.cost = cost;
@@ -50,8 +50,8 @@ while ~endLoop
     else
         z = z_new;
     end
-    D = getTangent(jac((n+nXi+2):end,1:(n+nXi+1)));
-    contData.strictMin = [contData.strictMin,min(eig(D'*jac(1:(n+nXi+1),1:(n+nXi+1))*D))];
+    D = getTangent(jac((n+m*nXi+2):end,1:(n+m*nXi+1)));
+    contData.strictMin = [contData.strictMin,min(eig(D'*jac(1:(n+m*nXi+1),1:(n+m*nXi+1))*D))];
     simJacobian = jac(:,1:opts.idxConPar-1);
     augJacobian = [jac;output.t'];
     contData.simJacDet = [contData.simJacDet,det(simJacobian)];
@@ -60,8 +60,8 @@ while ~endLoop
     contData.augJacobian(:,:,kLoop) = augJacobian;
     contData.T = [contData.T,z(1)];
     contData.x0 = [contData.x0,z(1+(1:n))];
-    contData.xi = [contData.xi,z(1+n+(1:nXi))];
-    contData.lambda = [contData.lambda,z(1+n+nXi+(1:(n+2)))];
+    contData.xi = [contData.xi,z(1+n+(1:m*nXi))];
+    contData.lambda = [contData.lambda,z(1+n+m*nXi+(1:(n+2)))];
     contData.sigma = [contData.sigma,z(end)];
     [~,cost] = rFun(z);
     contData.cost = [contData.cost,cost];

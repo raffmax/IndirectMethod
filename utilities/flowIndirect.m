@@ -11,7 +11,7 @@ odeOpts.Mass = blkdiag(eye(2*n+m),0);
 odefun = @(t,Z) dZdtFUN(t,Z,n,q,gamma);
 
 Z0 = [x0;0;p0;u0];
-[t,Z] = ode15s(odefun,linspace(0,T,201),Z0,odeOpts);
+[t,Z] = odeOpts.SolverType(odefun,linspace(0,T,201),Z0,odeOpts);
 xT = Z(end,1:n)';
 yT = Z(end,n+1)';
 pT = Z(end,n+1+(1:n))';

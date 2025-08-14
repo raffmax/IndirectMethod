@@ -20,18 +20,26 @@ gamma = sym('gamma', 'real');  % Slope of the ground (incline)
 
 %% Model Parameters
 % Define symbolic variables for the model's physical parameters
+% mass
 M_T     = sym('M_T',{'real','positive'}); %_T: torso
 M_f     = sym('M_f',{'real','positive'}); %_f: femur
 M_t     = sym('M_t',{'real','positive'}); %_t: tibia
+% length
 l_T     = sym('l_T',{'real','positive'});
 l_f     = sym('l_f',{'real','positive'});
 l_t     = sym('l_t',{'real','positive'});
+% inertia
 I_T     = sym('I_T',{'real','positive'});
 I_f     = sym('I_f',{'real','positive'});
 I_t     = sym('I_t',{'real','positive'});
+% mass center
 p_T     = sym('p_T',{'real','positive'});
 p_f     = sym('p_f',{'real','positive'});
 p_t     = sym('p_t',{'real','positive'});
+% viscous friction
+F_h     = sym('F_h',{'real','positive'}); % hip
+F_k     = sym('F_k',{'real','positive'}); % knee
+% gravity
 g       = sym('g',{'real','positive'});
 
 % Gravitational force vector in terms of incline gamma
@@ -94,10 +102,13 @@ T = 0.5 * ( + M_T * sum(d_CoG_T.^2) ...
             + I_t * sum(d_Angle_t_st.^2) );
 
 %% --- Euler-Lagrange Equations ---
-% M * ddq + C * dq + G = 0
+% M * ddq + C * dq + G = B * u - D * dq
 % Derive mass matrix (M), Coriolis matrix (C), and gravity vector (G) using
 % Euler-Lagrange formalism.
 [M, C, CMat, G] = eulerLagrange(T, V, q', dq'); 
+
+B = sym([eye(4);zeros(3,4)]);
+D = diag([F_h,F_h,F_k,F_k,0,0,0]);
 
 %% --- Contact Projection Matrices ---
 % Compute the contact matrices for the stance and swing legs, and their derivatives
@@ -149,9 +160,10 @@ end
 M_min = simplify(BTrafo' * M * BTrafo);
 c_min = simplify(BTrafo' * subs(C, [q; dq], [q_z; dq_z]) + BTrafo' * M * BdtTrafo * dz);
 
-% Potential energy and control input in minimal coordinates
+% Potential energy, control input, and damping in minimal coordinates
 G_min = simplify(BTrafo' * subs(G, q, q_z));
-B_min = simplify(BTrafo' * [eye(4);zeros(3,4)]);
+B_min = simplify(BTrafo' * B);
+D_min = simplify(BTrafo' * D * BTrafo);
 
 % Minimal coordinate system dynamics
 %f_min = [dz; simplify(M_min \ (B_min * u - G_min - c_min))];
@@ -171,6 +183,7 @@ m0_val  = 12+2*(6.8+3.2); % total Mass
 l0_val  = 0.8; % leg length
 g0_val  = 9.81; % gravity
 I0_val  = m0_val*l0_val^2; % inertia
+k0_val  = 1/(m0_val*sqrt(g0_val*l0_val^3)); % motor speed-torque gradient
 
 M_T_val = 12/m0_val;
 M_f_val = 6.8/m0_val;
@@ -188,21 +201,26 @@ p_T_val = 0.24/l0_val;
 p_f_val = 0.11/l0_val;
 p_t_val = 0.24/l0_val;
 
+k_mot_val = ( (3000*2*pi/60)/(2.8) )/k0_val;
+
 g_val = 1; % 9.81/g0_val
 
-posSwingFoot = subs(subs(pos_Foot_sw, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-posSwingKnee = subs(subs(pos_Knee_sw, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-posStanceKnee = subs(subs(pos_Knee_st, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-posHip = subs(subs(pos_Hip, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-posHead = subs(subs(pos_Head, q, q_z), {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+param = {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t};
+paramVal = {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val};
 
-M = subs(M, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-W_sw = subs(W_sw, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-BTrafo = subs(BTrafo, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+posSwingFoot = subs(subs(pos_Foot_sw, q, q_z), param, paramVal);
+posSwingKnee = subs(subs(pos_Knee_sw, q, q_z), param, paramVal);
+posStanceKnee = subs(subs(pos_Knee_st, q, q_z), param, paramVal);
+posHip = subs(subs(pos_Hip, q, q_z), param, paramVal);
+posHead = subs(subs(pos_Head, q, q_z), param, paramVal);
 
-M_min = subs(M_min, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-c_min = subs(c_min, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
-G_min = subs(G_min, {g, M_T,M_f,M_t, l_T,l_f,l_t, I_T,I_f,I_t, p_T,p_f,p_t}, {g_val, M_T_val,M_f_val,M_t_val, l_T_val,l_f_val,l_t_val, I_T_val,I_f_val,I_t_val, p_T_val,p_f_val,p_t_val});
+M = subs(M, param, paramVal);
+W_sw = subs(W_sw, param, paramVal);
+BTrafo = subs(BTrafo, param, paramVal);
+
+M_min = subs(M_min, param, paramVal);
+c_min = subs(c_min, param, paramVal);
+G_min = subs(G_min, param, paramVal);
 
 x = [z; dz];  % State vector
 dposSwingFootdx = jacobian(posSwingFoot, x);

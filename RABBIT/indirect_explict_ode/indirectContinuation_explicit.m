@@ -1,4 +1,4 @@
-function contData = indirectContinuation(z_init,rFun,sigma_end,n,m,fDstepSize,rootFunctionTolerance,h)
+function contData = indirectContinuation_explicit(z_init,rFun,sigma_end,n,m,fDstepSize,rootFunctionTolerance,h)
 %UNTITLED11 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -7,7 +7,7 @@ opts.Grad1 = false;
 opts.aimOnTarget = true;
 opts.idxConPar = numel(z_init);
 opts.FiniteDifferenceStepSize = fDstepSize;
-opts.MaxIterations = 20;
+opts.MaxIterations = 100;
 opts.FunctionTolerance = rootFunctionTolerance;
 opts.StepTolerance = 1e-11;
 [z,fval,~,output,jac] = NewtonsMethod(rFun,z_init,opts);
@@ -25,8 +25,7 @@ contData.T = z(1);
 contData.x0 = z(1+(1:n));
 contData.p0 = z(1+n+(1:n));
 contData.q = z(2*n+2);
-contData.u0 = z(2*n+2+(1:m));
-contData.lambda = z(2+2*n+m+(1:2));
+contData.lambda = z(2+2*n+(1:2));
 contData.sigma = z(end);
 [~,cost] = rFun(z);
 contData.cost = cost;
@@ -64,8 +63,7 @@ while ~endLoop
     contData.x0 = [contData.x0,z(1+(1:n))];
     contData.p0 = [contData.p0,z(1+n+(1:n))];
     contData.q = [contData.q,z(2+2*n)];
-    contData.u0 = [contData.u0,z(2*n+2+(1:m))];
-    contData.lambda = [contData.lambda,z(2+2*n+m+(1:2))];
+    contData.lambda = [contData.lambda,z(2+2*n+(1:2))];
     contData.sigma = [contData.sigma,z(end)];
     [~,cost] = rFun(z);
     contData.cost = [contData.cost,cost];

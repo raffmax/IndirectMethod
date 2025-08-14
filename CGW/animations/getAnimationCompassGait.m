@@ -3,8 +3,10 @@ function getAnimationCompassGait(dataIN,gamma,rep,filename)
 %   Detailed explanation goes here
 
 figure
-grid on; hold on; box on;
+grid off; hold on; box off; axis off;
 axis([-1, 1, -0.5, 1.5])
+set(gcf, 'Color', 'w');  % Set figure background to white
+set(gca, 'Color', 'w');  % Set axes background to white
 y_ = [];
 foot = [0; 0];
 footout = [];
