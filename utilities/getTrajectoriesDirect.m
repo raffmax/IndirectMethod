@@ -1,18 +1,21 @@
-function [t,x,u,cost] = getTrajectoriesDirect(T,x0,xi,gamma,vAVG,odeOpts)
+function [t,x,u,cost] = getTrajectoriesDirect(T,x0,xi,gamma,m,vAVG,odeOpts)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 
-[zT,~,~,~,t,Z] = flowDirect(T,x0,xi,gamma,odeOpts);
+[zT,~,~,~,t,Z] = flowDirect(T,x0,xi,gamma,m,odeOpts);
 yT = zT(end);
 
-u = zeros(size(t))';
+Xi = reshape(xi,m,numel(xi)/m);
+u  = zeros(m,numel(t));
+for j = 1:m
 for i = 1:numel(t)
     if odeOpts.bezierVSbspline
         %[u,u_xi,u_T] = getPolyInput(t,xi);
-        u(i) = getBSplineInput(t(i),xi,T,3,numel(xi)-3);
+        u(j,i) = getBSplineInput(t(i),Xi(:,j),T,3,numel(Xi(:,j))-3);
     else
-        u(i) = getPolyInput(t(i),xi);
+        u(j,i) = getPolyInput(t(i),Xi(:,j));
     end
+end
 end
 
 x=Z(:,1:numel(x0));

@@ -21,9 +21,9 @@ gamma_pas = contData1.gamma(idx);
 
 gamma_end = 0;
 
-fDstepSize = 1e-11; % finite difference step size
+fDstepSize = 1e-9; % finite difference step size
 rootFunctionTolerance = 1e-8;
-odeOpts = odeset('RelTol',1e-11,'AbsTol',1e-12); % ode solver
+odeOpts = odeset('RelTol',1e-9,'AbsTol',1e-10); % ode solver
 odeOpts.SolverType = @ode45;
 h = 1e-2; % fixed step-size in continuation
 
